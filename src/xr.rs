@@ -56,7 +56,7 @@ impl XrState {
     ) -> anyhow::Result<(WgpuState, XrState)> {
         use wgpu_hal::{api::Vulkan as V, Api};
 
-        let entry = xr::Entry::linked();
+        let entry = unsafe { xr::Entry::load() }?;
         let available_extensions = entry.enumerate_extensions()?;
         assert!(available_extensions.khr_vulkan_enable2);
         log::info!("available xr exts: {:#?}", available_extensions);
@@ -110,8 +110,8 @@ impl XrState {
 
         let vk_entry = unsafe { ash::Entry::load() }?;
         let flags = wgpu_hal::InstanceFlags::empty();
-        let mut extensions = <V as Api>::Instance::required_extensions(&vk_entry, flags)?;
-        extensions.push(ash::extensions::khr::Swapchain::name());
+        let extensions = <V as Api>::Instance::required_extensions(&vk_entry, flags)?;
+        let device_extensions = vec![ash::extensions::khr::Swapchain::name()];
         log::info!(
             "creating vulkan instance with these extensions: {:#?}",
             extensions
@@ -185,6 +185,7 @@ impl XrState {
 
         let (wgpu_open_device, vk_device_ptr, queue_family_index) =
             {
+                let extensions_cchar: Vec<_> = device_extensions.iter().map(|s| s.as_ptr()).collect();
                 let uab_types = wgpu_hal::UpdateAfterBindTypes::from_limits(
                     &wgpu_limits,
                     &wgpu_exposed_adapter
@@ -212,6 +213,7 @@ impl XrState {
                                 ..Default::default()
                             }),
                     )
+                    .enabled_extension_names(&extensions_cchar)
                     .build();
                 let vk_device = unsafe {
                     let vk_device = xr_instance

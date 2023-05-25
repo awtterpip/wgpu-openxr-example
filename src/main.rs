@@ -134,7 +134,7 @@ fn main() -> anyhow::Result<()> {
             format: window_swapchain_format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Immediate,
+            present_mode: wgpu::PresentMode::Fifo,
         }
     };
     surface.configure(&wgpu_state.device, &config);
